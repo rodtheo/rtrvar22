@@ -20,12 +20,11 @@ O arquivo BAM contêm 1.734.246 reads, sendo 1.505.766 (86,83%) dessas reads map
 
 ![Qualidade dos scores de mapeamento após execução de algoritmo de recalibragem de bases do GATK.](qual_scores.png)
 
-Outras métricas podem ser verificadas no arquivo `metricas.txt`, anexo como resposta à questão 3.
 
 Resultados
 
-- Para a questão 1 deverá ser enviado o VCF pós-filtragem.
+- Para a questão 1 deverá ser enviado o VCF pós-filtragem = `amostra-lbb.filtered.recode.vcf`
 
-- Para a questão 2 deverá ser enviado um BED, contendo as regiões não cobertas.
+- Para a questão 2 deverá ser enviado um BED, contendo as regiões não cobertas = `amostra-lbb.regions.LowDP30.bed`
 
-- Para a terceira questão deverá ser enviado um arquivo TSV, com as colunas "nreads" (número de reads usados), "proper_pairs" (pares mapeados corretamente), "mapQ_0" (número de reads com qualidade de mapeamento == 0)
+- Para a terceira questão deverá ser enviado um arquivo TSV, com as colunas "nreads" (número de reads usados), "proper_pairs" (pares mapeados corretamente), "mapQ_0" (número de reads com qualidade de mapeamento == 0) = `metrics_mapping.tsv`
