@@ -1,0 +1,5 @@
+data_dir: "data"
+samples: samples.tsv
+genome: grch38.chr22.fasta
+known_vcf: pequeno-gabarito.vcf
+threads: 4
