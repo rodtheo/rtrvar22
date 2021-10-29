@@ -1,0 +1,97 @@
+
+# make sure you have docker and y
+
+docker pull broadinstitute/gatk:4.2.2.0
+
+docker run -v $PWD:/home/Dia_1 -it broadinstitute/gatk:4.2.2.0 /bin/bash
+
+# make sure you install conda environment from environment.yaml file located in this repo
+(lbb-mendelics-2021) $ seqkit stats amostra-lbb_R1.fq.gz
+file                  format  type  num_seqs     sum_len  min_len  avg_len  max_len
+amostra-lbb_R1.fq.gz  FASTQ   DNA    867,045  87,571,545      101      101      101
+(lbb-mendelics-2021) $ seqkit stats amostra-lbb_R2.fq.gz
+file                  format  type  num_seqs     sum_len  min_len  avg_len  max_len
+amostra-lbb_R2.fq.gz  FASTQ   DNA    867,045  87,571,545      101      101      101
+
+
+
+(lbb-mendelics-2021) $ bwa index grch38.chr22.fasta.gz
+[bwa_index] Pack FASTA... 0.52 sec
+[bwa_index] Construct BWT for the packed sequence...
+[BWTIncCreate] textLength=101636936, availableWord=19151484
+[BWTIncConstructFromPacked] 10 iterations done. 31590664 characters processed.
+[BWTIncConstructFromPacked] 20 iterations done. 58359704 characters processed.
+[BWTIncConstructFromPacked] 30 iterations done. 82148056 characters processed.
+[BWTIncConstructFromPacked] 40 iterations done. 101636936 characters processed.
+[bwt_gen] Finished constructing BWT in 40 iterations.
+[bwa_index] 27.81 seconds elapse.
+[bwa_index] Update BWT... 0.23 sec
+[bwa_index] Pack forward-only FASTA... 0.40 sec
+[bwa_index] Construct SA from BWT and Occ... 11.49 sec
+[main] Version: 0.7.17-r1188
+[main] CMD: bwa index grch38.chr22.fasta.gz
+[main] Real time: 40.505 sec; CPU: 40.436 sec
+
+
+
+
+(lbb-mendelics-2021) rodtheo@rtr-acer:~/Bioinfo/project-data/hackathons/lbb-mendelics-2021/Dia_1$ bwa mem -t 6 grch38.chr22.fasta.gz amostra-lbb_R1.fq.gz amostra-lbb_R2.fq.gz > amostra-lbb.sam
+
+
+(lbb-mendelics-2021) rodtheo@rtr-acer:~/Bioinfo/project-data/hackathons/lbb-mendelics-2021/Dia_1$ sambamba view --format=bam --sam-input --output-filename amostra-lbb.bam amotra-lbb.sam
+
+(lbb-mendelics-2021) rodtheo@rtr-acer:~/Bioinfo/project-data/hackathons/lbb-mendelics-2021/Dia_1$ sambamba sort amostra-lbb.bam
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk MarkDuplicates -R grch38.chr22.fasta.gz -I amostra-lbb.sorted.bam -O amostra-lbb.sorted.mdup.bam --METRICS_FILE metrics_gatk_markduplicates.txt
+
+
+
+(lbb-mendelics-2021) rodtheo@rtr-acer:~/Bioinfo/project-data/hackathons/lbb-mendelics-2021/Dia_1$ zcat grch38.chr22.fasta.gz > grch38.chr22.fasta
+(lbb-mendelics-2021) rodtheo@rtr-acer:~/Bioinfo/project-data/hackathons/lbb-mendelics-2021/Dia_1$ seqkit faidx grch38.chr22.fasta
+[INFO] create FASTA index for grch38.chr22.fasta
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk CreateSequenceDictionary -R grch38.chr22.fasta
+
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk AddOrReplaceReadGroups --INPUT amostra-lbb.sorted.mdup.bam --OUTPUT amostra-lbb.sorted.mdup.addRG.bam --RGLB lib1 --RGPL ILLUMINA --RGPU unit1 --RGSM mend
+
+Required Arguments:
+
+--INPUT,-I <String>           Input file (BAM or SAM or a GA4GH url).  Required.
+
+--OUTPUT,-O <File>            Output file (BAM or SAM).  Required.
+
+--RGLB,-LB <String>           Read-Group library  Required.
+
+--RGPL,-PL <String>           Read-Group platform (e.g. ILLUMINA, SOLID)  Required.
+
+--RGPU,-PU <String>           Read-Group platform unit (eg. run barcode)  Required.
+
+--RGSM,-SM <String>           Read-Group sample name  Required.
+
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk IndexFeatureFile -I pequeno-gabarito.vcf
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk BaseRecalibrator -R grch38.chr22.fasta -I amostra-lbb.sorted.mdup.addRG.bam --known-sites pequeno-gabarito.vcf -O recal_data.table
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk ApplyBQSR -R grch38.chr22.fasta -I amostra-lbb.sorted.mdup.addRG.bam -bqsr recal_data.table -O amostra-lbb.sorted.mdup.addRG.recal.bam
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk HaplotypeCaller -R grch38.chr22.fasta -I amostra-lbb.sorted.mdup.addRG.recal.bam -O amostra-lbb.vcf.gz -bamout amostra-lbb.sorted.mdup.addRG.recal.bamout.bam
+
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk CNNScoreVariants -R grch38.chr22.fasta -I amostra-lbb.sorted.mdup.addRG.recal.bamout.bam -V amostra-lbb.vcf.gz -O my_2d_scored.vcf --tensor-type read_tensor
+
+# The VQSLOD for a given variant is the log ratio of the variant’s probabilities of belonging to the positive model and to the negative model, respectively.
+
+
+gatk VariantsToTable -V  amostra-lbb.vcf.gz -F CHROM -F POS -F QUAL -F BaseQRankSum -F MQRankSum -F ReadPosRankSum -F DP -F FS -F MQ -F QD -F SOR -F CNN_2D -GF GQ -O vcf_stats.tsv
+
+
+
+## 2D FILTERING CNN
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk VariantsToTable -V  my_2d_scored.vcf -F CHROM -F POS -F QUAL -F BaseQRankSum -F MQRankSum -F ReadPosRankSum -F DP -F FS -F MQ -F QD -F SOR -F CNN_2D -GF GQ -O my_2d_scored_stats.tsv
+
+root@9a6fe2b02970:/home/Dia_1/Dia_1# gatk FilterVariantTranches -V my_2d_scored.vcf -O my_2d_cnn_filtered.vcf --resource pequeno-gabarito.vcf  --info-key CNN_2D --snp-tranche 99.9 --indel-tranche 99.9
+
+
+(lbb-mendelics-2021) rodtheo@rtr-acer:~/Bioinfo/project-data/hackathons/lbb-mendelics-2021/Dia_1$ vcftools --vcf my_2d_cnn_filtered.vcf --remove-filtered-all --recode --out amostra-lbb-filtered-by-2dcnn --recode-INFO-all
